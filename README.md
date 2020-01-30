@@ -3,6 +3,7 @@ The deep learning-based Explainable RecSys is a personalized, explainable recomm
 
 ## Environment
 Python 3.6
+
 TensorFlow 1.15
 
 Prepare the training/test sets via `preprocessing/data.ipynb` and train the model by running `train.py`.
