@@ -1,4 +1,4 @@
-# Explainable-RecSys
+# Explainable RecSys
 The deep learning-based Explainable RecSys is a personalized, explainable recommendation system for e-commerce applications that surfaces relevant items to users while simultaneously highlighting reviews most relevant to their personal preferences.
 
 ## Environment
