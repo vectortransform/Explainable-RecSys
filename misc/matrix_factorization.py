@@ -27,45 +27,40 @@ lr = args.lr
 latent_size = parser.latent
 random_seed = args.seed
 
-# Load files
-TPS_DIR = 'data/toyandgame'
 
-pkl_file = open(os.path.join(TPS_DIR, 'toyandgame.train'), 'rb')
-train_data = pickle.load(pkl_file)
-train_data = np.array(train_data)
-pkl_file.close()
-pkl_file = open(os.path.join(TPS_DIR, 'toyandgame.valid'), 'rb')
-test_data = pickle.load(pkl_file)
-test_data = np.array(test_data)
-pkl_file.close()
-print('Loading files done')
+def prepare_train_test_data(TPS_DIR, filename, reader):
+    pkl_file = open(os.path.join(TPS_DIR, filename), 'rb')
+    data = pickle.load(pkl_file)
+    data = np.array(data)
+    pkl_file.close()
+
+    uid, iid, reuid, reiid, yrating = zip(*data)
+    uid = np.array(uid)
+    iid = np.array(iid)
+    yrating = np.array(yrating)
+    df = pd.DataFrame({'userID': uid[:, 0], 'itemID': iid[:, 0], 'rating': yrating[:, 0]})
+    dataset = Dataset.load_from_df(df_train[['userID', 'itemID', 'rating']], reader)
+    dataset = dataset.build_full_trainset()
+
+    return dataset, len(uid)
+
 
 # Prepare training/validation sets
-uid, iid, reuid, reiid, y_batch = zip(*train_data)
-uid = np.array(uid)
-iid = np.array(iid)
-y_batch = np.array(y_batch)
-df_train = pd.DataFrame({'userID': uid[:, 0], 'itemID': iid[:, 0], 'rating': y_batch[:, 0]})
+print('Loading files...')
 
-uid_v, iid_v, reuid_v, reiid_v, y_batch_v = zip(*test_data)
-uid_v = np.array(uid_v)
-iid_v = np.array(iid_v)
-y_batch_v = np.array(y_batch_v)
-df_valid = pd.DataFrame({'userID': uid_v[:, 0], 'itemID': iid_v[:, 0], 'rating': y_batch_v[:, 0]})
-
+TPS_DIR = 'data/toyandgame'
 reader = Reader(rating_scale=(1., 5.))
-data_tr = Dataset.load_from_df(df_train[['userID', 'itemID', 'rating']], reader)
-data_va = Dataset.load_from_df(df_valid[['userID', 'itemID', 'rating']], reader)
 
-data_tr = data_tr.build_full_trainset()
-data_va = data_va.build_full_trainset()
+data_tr, num_tr = prepare_train_test_data(TPS_DIR, 'toyandgame.train', reader)
+data_va, num_va = prepare_train_test_data(TPS_DIR, 'toyandgame.valid', reader)
 data_va = data_va.build_testset()
-print('Training set: {} samples and validation set: {} samples prepared'.format(len(uid), len(uid_v)))
+
+print('Training set: {} samples and validation set: {} samples prepared'.format(num_tr, num_va))
 
 
 # Model training
-algo=surprise.prediction_algorithms.matrix_factorization.NMF(n_factors=latent_size, lr_bu=lr, lr_bi=lr,\
-                                                                 random_state=random_seed, biased=False)
+algo = surprise.prediction_algorithms.matrix_factorization.NMF(n_factors=latent_size, lr_bu=lr, lr_bi=lr,
+                                                               random_state=random_seed, biased=False)
 algo.fit(data_tr)
 pred_train = algo.test(data_tr.build_testset())
 pred_valid = algo.test(data_va)

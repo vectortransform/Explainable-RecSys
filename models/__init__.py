@@ -1,1 +1,1 @@
-from deeprecsys import *
+from deeprecsys import DeepRecSys
