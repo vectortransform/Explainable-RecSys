@@ -49,7 +49,7 @@ def attention_weights(input_uid, input_iid, x_u, x_i,
                                                                                          0.1, maxval=0.1, seed=random_seed), name='item_id_embed')(input_iid)
 
     vec_uid = Dense(attention_size, activation=None, use_bias=False, kernel_initializer='glorot_uniform',
-                    kernel_regularizer=l2(l2_reg_lambda), name='uesr_id_attention')(vec_uid)
+                    kernel_regularizer=l2(l2_reg_lambda), name='user_id_attention')(vec_uid)
     vec_iid = Dense(attention_size, activation=None, use_bias=False, kernel_initializer='glorot_uniform',
                     kernel_regularizer=l2(l2_reg_lambda), name='item_id_attention')(vec_iid)
     vec_textu = Dense(attention_size, activation=None, use_bias=False, kernel_initializer='glorot_uniform',
