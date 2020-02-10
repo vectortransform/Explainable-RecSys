@@ -11,7 +11,7 @@ sys.path.append('models/')
 import tensorflow as tf
 from tensorflow.keras.models import Model
 from tensorflow.keras.layers import Input
-from models import *
+from models import DeepRecSys
 from utils import load_parameters, load_train_test_data, load_word_embedding_weights
 
 
@@ -55,22 +55,15 @@ user_num, item_num, review_num_u, review_num_i, review_len_u, review_len_i,\
 uid_tr, iid_tr, reuid_tr, reiid_tr, yrating_tr, texts_u_tr, texts_i_tr = load_train_test_data(
     TPS_DIR, 'toyandgame.train', u_text, i_text)
 uid_va, iid_va, reuid_va, reiid_va, yrating_va, texts_u_va, texts_i_va = load_train_test_data(
-    TPS_DIR, 'toyandgame.test', u_text, i_text)
+    TPS_DIR, 'toyandgame.valid', u_text, i_text)
 print('Training set: {} samples and validation set: {} samples prepared'.format(len(uid_tr), len(uid_va)))
 
 initW_u, initW_i = load_word_embedding_weights(TPS_DIR, 'initW_u', 'initW_i')
 print('word2vec weights initialization done')
 
 
-input_u = Input(shape=(review_num_u, review_len_u), dtype='int32', name='texts_u')
-input_i = Input(shape=(review_num_i, review_len_i), dtype='int32', name='texts_i')
-input_uid = Input(shape=(1), dtype='int32', name='uid')
-input_iid = Input(shape=(1), dtype='int32', name='iid')
-
-
 # Build the model
-model = DeepRecSys(input_u, input_i, input_uid, input_iid,
-                   l2_reg_lambda, random_seed, dropout_keep_prob, embed_word_dim, embed_id_dim,
+model = DeepRecSys(l2_reg_lambda, random_seed, dropout_keep_prob, embed_word_dim, embed_id_dim,
                    filter_size, num_filters, attention_size, n_latent,
                    user_num, item_num, user_vocab_size, item_vocab_size,
                    review_num_u, review_len_u, review_num_i, review_len_i,

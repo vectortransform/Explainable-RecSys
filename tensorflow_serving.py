@@ -10,7 +10,7 @@ sys.path.append('models/')
 
 import tensorflow as tf
 from tensorflow.keras.models import Model
-from models import *
+from models import DeepRecSys
 from utils import load_parameters, load_train_test_data
 
 parser = argparse.ArgumentParser(description='Input --lr or -l for learning rate tuning')
@@ -60,17 +60,11 @@ print('Test set: {} samples prepared'.format(len(uid_te)))
 
 
 # Build the model
-input_u = Input(shape=(review_num_u, review_len_u), dtype='int32', name='texts_u')
-input_i = Input(shape=(review_num_i, review_len_i), dtype='int32', name='texts_i')
-input_uid = Input(shape=(1), dtype='int32', name='uid')
-input_iid = Input(shape=(1), dtype='int32', name='iid')
-
-model = DeepRecSys(input_u, input_i, input_uid, input_iid,
-                   l2_reg_lambda, random_seed, dropout_keep_prob, embed_word_dim, embed_id_dim,
+model = DeepRecSys(l2_reg_lambda, random_seed, dropout_keep_prob, embed_word_dim, embed_id_dim,
                    filter_size, num_filters, attention_size, n_latent,
                    user_num, item_num, user_vocab_size, item_vocab_size,
                    review_num_u, review_len_u, review_num_i, review_len_i,
-                   initW_u, initW_i)
+                   initW_u, initW_i, is_output_weights=True)
 
 print('Model created with {} layers'.format(len(model.layers)))
 print(model.summary())
@@ -85,24 +79,28 @@ print('Model weights loaded!')
 time_str = datetime.datetime.now().isoformat()
 print(time_str)
 
-# Rating prediction
+# Rating and review-usefulness prediction
 print('Prediction starts!')
-ratings = model.predict(
+outputs = model.predict(
     {'texts_u': texts_u_te, 'texts_i': texts_i_te, 'uid': uid_te, 'iid': iid_te},
     batch_size=batch_size,
 )
 
-# Review-usefulness prediction
-layer_i = model.layers[31]
-activation_i = Model(inputs=model.input, outputs=layer_i.output)
-review_weights = activation_i.predict(
-    {'texts_u': texts_u_te, 'texts_i': texts_i_te, 'uid': uid_te, 'iid': iid_te},
-    batch_size=batch_size
-)
+ratings, item_rev_weights = outputs[0], outputs[2]
 
 print(ratings)
-print(review_weights)
+print(item_review_weights)
 
 print('Prediction complete')
 time_str = datetime.datetime.now().isoformat()
 print(time_str)
+
+# Save the model for TensorFLow Serving
+os.makedirs('model_serve/1')
+tf.saved_model.simple_save(
+    tf.keras.backend.get_session(),
+    'model_serve/1',
+    inputs={i.name: i for i in model.inputs},
+    outputs={j.name: j for j in model.outputs})
+
+print('\nSaved model:')

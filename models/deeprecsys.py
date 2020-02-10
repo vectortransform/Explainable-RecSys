@@ -134,15 +134,19 @@ def predict_rating(f_u, f_i, input_uid, input_iid, dropout_keep_prob, random_see
     return rating
 
 
-def DeepRecSys(input_u, input_i, input_uid, input_iid,
-               l2_reg_lambda, random_seed, dropout_keep_prob, embed_word_dim, embed_id_dim,
+def DeepRecSys(l2_reg_lambda, random_seed, dropout_keep_prob, embed_word_dim, embed_id_dim,
                filter_size, num_filters, attention_size, n_latent,
                user_num, item_num, user_vocab_size, item_vocab_size,
                review_num_u, review_len_u, review_num_i, review_len_i,
-               initW_u, initW_i):
+               initW_u, initW_i, is_output_weights=False):
     '''
     Generate the deep learning model
     '''
+    input_u = Input(shape=(review_num_u, review_len_u), dtype='int32', name='texts_u')
+    input_i = Input(shape=(review_num_i, review_len_i), dtype='int32', name='texts_i')
+    input_uid = Input(shape=(1), dtype='int32', name='uid')
+    input_iid = Input(shape=(1), dtype='int32', name='iid')
+
     x_u, x_i = CNN_text_processer(input_u, input_i, user_vocab_size, item_vocab_size, embed_word_dim, random_seed,
                                   num_filters, filter_size, review_num_u, review_len_u, review_num_i, review_len_i,
                                   initW_u, initW_i)
@@ -155,4 +159,7 @@ def DeepRecSys(input_u, input_i, input_uid, input_iid,
     rating = predict_rating(f_u, f_i, input_uid, input_iid,
                             dropout_keep_prob, random_seed, user_num, item_num)
 
-    return Model(inputs=[input_u, input_i, input_uid, input_iid], outputs=rating)
+    if is_output_weights:
+        return Model(inputs=[input_u, input_i, input_uid, input_iid], outputs=[rating, out_u, out_i])
+    else:
+        return Model(inputs=[input_u, input_i, input_uid, input_iid], outputs=rating)

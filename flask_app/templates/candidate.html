@@ -1,0 +1,74 @@
+<html>
+
+<head>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css" integrity="sha384-Vkoo8x4CGsO3+Hhxv8T/Q5PaXtkKtu6ug5TOeNV6gBiFeWPGFN9MuhOf23Q9Ifjh" crossorigin="anonymous">
+    <script src="https://code.jquery.com/jquery-3.4.1.min.js" integrity="sha256-CSXorXvZcTkaix6Yvo6HppcZGetbYMGWSFlBw8HfCJo=" crossorigin="anonymous"></script>
+    <title>Explainable RecSys</title>
+</head>
+
+<body>
+    <div class="container">
+        <h4 class="card-title">Choose a User ID (0~19411)</h4>
+            <div class="input-group mb-3">
+                <div class="input-group-prepend">
+                    <span class="input-group-text" id="basic-addon3">User ID: </span>
+                </div>
+                <input type="number" class="form-control" id="userid" name="uid" value={{last_uid}}>
+                <button type="button" class="btn btn-outline-success" id="rankbutton">Ranking!</button>
+            </div>
+
+        <h4 class="card-title" id="description">100 randomly generated Item IDs:</h4>
+        <div class="row", id="grids">
+            {%for i in range(0, 10)%}
+                {%for j in range(0, 10)%}
+                    <div class="col border border-dark" align="center">
+                        <div id="iid_{{i*10+j}}">
+                            #{{result[i*10+j]}}
+                        </div>
+                        <div id="ifig_{{i*10+j}}">
+                        </div>
+                        <div id="irating_{{i*10+j}}">
+                            Rating ?
+                        </div>
+                    </div>
+                {%endfor%}
+                <div class="w-100"></div>
+            {%endfor%}
+        </div>
+
+        <h5 class="card-title" id="toprev_title" style="display: none;">
+            We also suggest item #<span id="rev_iid"></span>'s top-3 reviews to you, because these helpful reviews are very likely to describe how this item matches your interest!
+        </h5>
+        <button type="button" class="btn btn-outline-dark" id="back_btn" style="display: none;">Back to items</button>
+        <hr>
+        <div id="review_grids" style="display: none;">
+            <div class="border border-info" id="item_info">
+            </div>
+            <div class="border border-info" id="review_grid1">
+                <div>
+                    <b style="font-size:25px">Top-3 reviews most relevant to your personal preferences:</b>
+                </div>
+                <br>
+                <div class="" id="rev_type1">
+                </div>
+            </div>
+
+            <div class="border border-info" id="review_grid3">
+                <div>
+                    <b style="font-size:25px">Other reviews:</b>
+                </div>
+                <br>
+                <div class="" id="rev_type3">
+                </div>
+            </div>
+        </div>
+
+        <span id="res" style="display: none;">{{result}}</span>
+    </div>
+
+    <script src="{{ url_for('static', filename='predict.js') }}"></script>
+    <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js" integrity="sha384-Q6E9RHvbIyZFJoft+2mJbHaEWldlvI9IOYy5n3zV9zzTtmI3UksdQRVvoxMfooAo" crossorigin="anonymous"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/js/bootstrap.min.js" integrity="sha384-wfSDF2E50Y2D1uUdj0O3uMBJnjuUD4Ih7YwaYd1iqfktj0Uod8GCExl3Og8ifwB6" crossorigin="anonymous"></script>
+</body>
+
+</html>
