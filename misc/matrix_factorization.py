@@ -11,6 +11,7 @@ from surprise import Reader
 from surprise import accuracy
 from surprise.model_selection import train_test_split
 from surprise.model_selection import cross_validate
+from utils import prepare_train_test_data
 
 
 parser = argparse.ArgumentParser(description='Hyperparameters')
@@ -26,23 +27,6 @@ args = parser.parse_args()
 lr = args.lr
 latent_size = parser.latent
 random_seed = args.seed
-
-
-def prepare_train_test_data(TPS_DIR, filename, reader):
-    pkl_file = open(os.path.join(TPS_DIR, filename), 'rb')
-    data = pickle.load(pkl_file)
-    data = np.array(data)
-    pkl_file.close()
-
-    uid, iid, reuid, reiid, yrating = zip(*data)
-    uid = np.array(uid)
-    iid = np.array(iid)
-    yrating = np.array(yrating)
-    df = pd.DataFrame({'userID': uid[:, 0], 'itemID': iid[:, 0], 'rating': yrating[:, 0]})
-    dataset = Dataset.load_from_df(df_train[['userID', 'itemID', 'rating']], reader)
-    dataset = dataset.build_full_trainset()
-
-    return dataset, len(uid)
 
 
 # Prepare training/validation sets

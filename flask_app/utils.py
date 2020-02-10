@@ -2,6 +2,7 @@ import os
 import numpy as np
 import pickle
 
+
 def load_parameters(TPS_DIR, filename):
     # Load the parameters for the model
     f_para = open(os.path.join(TPS_DIR, filename), 'rb')
@@ -23,8 +24,8 @@ def load_parameters(TPS_DIR, filename):
     f_para.close()
 
     return user_num, item_num, review_num_u, review_num_i, review_len_u, review_len_i,\
-    vocabulary_user, vocabulary_item, train_length, test_length, u_text, i_text,\
-    user_vocab_size, item_vocab_size
+        vocabulary_user, vocabulary_item, train_length, test_length, u_text, i_text,\
+        user_vocab_size, item_vocab_size
 
 
 def load_train_test_data(TPS_DIR, filename, u_text, i_text):
@@ -50,14 +51,3 @@ def load_train_test_data(TPS_DIR, filename, u_text, i_text):
     texts_i = np.array(texts_i)
 
     return uid, iid, reuid, reiid, y_batch, texts_u, texts_i
-
-def load_word_embedding_weights(TPS_DIR, filename_u, filename_i):
-    # Load pretrained wording embedding weights for the model
-    pkl_file = open(os.path.join(TPS_DIR, filename_u), 'rb')
-    initW_u = pickle.load(pkl_file)
-    pkl_file.close()
-    pkl_file = open(os.path.join(TPS_DIR, filename_i), 'rb')
-    initW_i = pickle.load(pkl_file)
-    pkl_file.close()
-
-    return initW_u, initW_i
