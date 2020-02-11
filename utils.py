@@ -2,8 +2,21 @@ import os
 import numpy as np
 import pickle
 
+
 def load_parameters(TPS_DIR, filename):
-    # Load the parameters for the model
+    """
+    Load the parameters for the model
+
+    Args:
+    -------
+    TPS_DIR: directory of the data folder
+    filename: file name
+
+    Outputs:
+    -------
+    : parameters for building the model
+    """
+
     f_para = open(os.path.join(TPS_DIR, filename), 'rb')
     para = pickle.load(f_para)
     user_num = para['user_num']
@@ -23,12 +36,26 @@ def load_parameters(TPS_DIR, filename):
     f_para.close()
 
     return user_num, item_num, review_num_u, review_num_i, review_len_u, review_len_i,\
-    vocabulary_user, vocabulary_item, train_length, test_length, u_text, i_text,\
-    user_vocab_size, item_vocab_size
+        vocabulary_user, vocabulary_item, train_length, test_length, u_text, i_text,\
+        user_vocab_size, item_vocab_size
 
 
 def load_train_test_data(TPS_DIR, filename, u_text, i_text):
-    # Load and prepare training/validation/test sets
+    """
+    Prepare training/validation/test sets
+
+    Args:
+    -------
+    TPS_DIR: directory of the data folder
+    filename: file name of the dataset
+    u_text: dictionary for user's reviews
+    i_text: dictionary for item's reviews
+
+    Outputs:
+    -------
+    : training/validation/test sets
+    """
+
     pkl_file = open(os.path.join(TPS_DIR, filename), 'rb')
     data = pickle.load(pkl_file)
     data = np.array(data)
@@ -51,8 +78,22 @@ def load_train_test_data(TPS_DIR, filename, u_text, i_text):
 
     return uid, iid, reuid, reiid, y_batch, texts_u, texts_i
 
+
 def load_word_embedding_weights(TPS_DIR, filename_u, filename_i):
-    # Load pretrained wording embedding weights for the model
+    """
+    Load pretrained wording embedding weights for the model
+
+    Args:
+    -------
+    TPS_DIR: directory of the data folder
+    filename_u: file name for the embededding matrix for user's reviews
+    filename_i: file name for the embededding matrix for item's reviews
+
+    Outputs:
+    -------
+    : user and item word embedding
+    """
+
     pkl_file = open(os.path.join(TPS_DIR, filename_u), 'rb')
     initW_u = pickle.load(pkl_file)
     pkl_file.close()

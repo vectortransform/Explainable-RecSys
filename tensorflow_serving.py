@@ -10,6 +10,7 @@ sys.path.append('models/')
 
 import tensorflow as tf
 from tensorflow.keras.models import Model
+
 from models import DeepRecSys
 from utils import load_parameters, load_train_test_data
 

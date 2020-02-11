@@ -8,7 +8,7 @@ import json
 import requests
 from flask import Flask, request, jsonify, render_template
 
-from utils import load_parameters
+from utils import load_parameters, tf_serving, get_metadata
 
 # Read files
 np.random.seed(2017)
@@ -47,13 +47,19 @@ app = Flask(__name__)
 
 @app.route('/hello/', methods=['GET', 'POST'])
 def hello_world():
-    # Testing url
+    """
+    Test the Flask App
+    """
+
     return 'Hello, World!'
 
 
 @app.route('/', methods=['POST', 'GET'])
 def index():
-    # Index page
+    """
+    Index page
+    """
+
     if request.method == 'POST':
         return render_template('index.html')
 
@@ -63,7 +69,10 @@ def index():
 
 @app.route('/candidate', methods=['GET', 'POST'])
 def generate_candidate():
-    # Generate 100 item ID as candidates
+    """
+    Generate 100 items as candidates
+    """
+
     if request.method == 'POST':
         user_id = int(request.form['uid'])
         item_ids = np.random.randint(0, item_num, size=100)
@@ -76,7 +85,14 @@ def generate_candidate():
 
 @app.route('/ranking', methods=['GET', 'POST'])
 def ranking_item():
-    # Rank the items based on their predicted ratings
+    """
+    Rank the items based on their predicted ratings
+
+    Outputs:
+    -------
+    : predicted ratings, inference time, ordered item ids, item metadata
+    """
+
     if request.method == 'POST':
         ids = request.json
         user_id = int(ids['uid'])
@@ -97,44 +113,19 @@ def ranking_item():
         item_ids = item_ids.reshape(-1, 1)
 
         # Feed the inputs to the Tensorflow Serving model
-        insts = {'texts_u:0': texts_u, 'texts_i:0': texts_i,
-                 'uid:0': user_ids.tolist(), 'iid:0': item_ids.tolist()}
-        data = json.dumps({"signature_name": "serving_default", "inputs": insts})
-        headers = {"content-type": "application/json"}
-        time_a = datetime.datetime.now()
-        json_response = requests.post(
-            'http://localhost:8501/v1/models/recsys_model:predict', data=data, headers=headers)
-        time_b = datetime.datetime.now()
-        time_dif = time_b - time_a
+        res, time_dif = tf_serving(texts_u, texts_i, user_ids, item_ids)
 
-        # Get the results
-        res = json.loads(json_response.text)['outputs']
-
+        # Get the ranking results
         rating = np.array(res['final_rating/add_1:0']).reshape(-1)
         order = np.argsort(rating)[::-1]
         item_ids_new = item_ids.reshape(-1)[order]
         rating_new = rating[order]
 
         # Prepare the metadata for 10 suggested items
-        des_meta = []
-        title_meta = []
-        price_meta = []
-        imurl_meta = []
-        categ_meta = []
+        des_meta, title_meta, price_meta, imurl_meta, categ_meta = get_metadata(
+            df_meta, item_ids_new, num_top=10)
 
-        for i in range(10):
-            sample = df_meta.loc[item_ids_new[i]]
-            if sample['asin'] != item_ids_new[i]:
-                print('Wrong id metadata', item_ids_new[i], sample['asin'])
-            else:
-                des_meta.append(sample['description'])
-                title_meta.append(sample['title'])
-                price_meta.append(sample['price'])
-                imurl_meta.append(sample['imUrl'])
-                categ_meta.append(sample['categories'])
-
-        return json.dumps({'rating': rating_new.tolist(), 'infertime': time_dif.total_seconds(),
-                           'item_ids': item_ids_new.tolist(), 'user_rev_original': user_rev_original[user_id],
+        return json.dumps({'rating': rating_new.tolist(), 'infertime': time_dif.total_seconds(), 'item_ids': item_ids_new.tolist(),
                            'des_meta': des_meta, 'title_meta': title_meta, 'price_meta': price_meta, 'imurl_meta': imurl_meta, 'categ_meta': categ_meta})
 
     else:
@@ -143,26 +134,23 @@ def ranking_item():
 
 @app.route('/predictreview', methods=['GET', 'POST'])
 def rating_review():
-    # Review-usefulness prediction
+    """
+    Predict personalized review-usefulness
+
+    Outputs:
+    -------
+    : predicted ratings, inference time, top reviews with ratings, other reviews with ratings, item metadata
+    """
     if request.method == 'POST':
         ids = request.json
         user_id = int(ids['uid'])
         item_id = int(ids['iid'])
 
         # Feed the inputs to the Tensorflow Serving model
-        insts = {'texts_u:0': [u_text[user_id].tolist()], 'texts_i:0': [i_text[item_id].tolist()], 'uid:0': [
-            [user_id]], 'iid:0': [[item_id]]}
-        data = json.dumps({"signature_name": "serving_default", "inputs": insts})
-        headers = {"content-type": "application/json"}
-        time_a = datetime.datetime.now()
-        json_response = requests.post(
-            'http://localhost:8501/v1/models/recsys_model:predict', data=data, headers=headers)
-        time_b = datetime.datetime.now()
-        time_dif = time_b - time_a
+        res, time_dif = tf_serving([u_text[user_id].tolist()], [i_text[item_id].tolist()],
+                                   np.array([[user_id]]), np.array([[item_id]]))
 
-        # Get the results
-        res = json.loads(json_response.text)['outputs']
-
+        # Get the rating and ordered reviews based on their review-usefulness
         rating = np.array(res['final_rating/add_1:0']).reshape(-1)
         item_rev_weights = np.array(res['item_rev_weights/transpose_1:0']).reshape(-1)
 
@@ -187,20 +175,12 @@ def rating_review():
         rev_rate_other = [int(float(df_revrate[otherrev])) for otherrev in otherrevs]
 
         # Prepare the metadata for the item
-        sample = df_meta.loc[item_id]
-        if sample['asin'] != item_id:
-            print('Wrong id metadata', item_id, sample['asin'])
-        else:
-            des_meta = sample['description']
-            title_meta = sample['title']
-            price_meta = sample['price']
-            imurl_meta = sample['imUrl']
-            categ_meta = sample['categories']
+        des_meta, title_meta, price_meta, imurl_meta, categ_meta = get_metadata(
+            df_meta, item_id, single_pred=True)
 
         return json.dumps({'rating': rating.tolist(), 'infertime': time_dif.total_seconds(),
-                           'toprevs': toprevs, 'otherrevs': otherrevs,
-                           'des_meta': des_meta, 'title_meta': title_meta, 'price_meta': price_meta, 'imurl_meta': imurl_meta, 'categ_meta': categ_meta,
-                           'rev_rate_top': rev_rate_top, 'rev_rate_other': rev_rate_other})
+                           'toprevs': toprevs, 'otherrevs': otherrevs, 'rev_rate_top': rev_rate_top, 'rev_rate_other': rev_rate_other,
+                           'des_meta': des_meta, 'title_meta': title_meta, 'price_meta': price_meta, 'imurl_meta': imurl_meta, 'categ_meta': categ_meta})
 
     else:
         return render_template('candidate.html')

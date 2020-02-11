@@ -5,7 +5,21 @@ import pickle
 
 
 def prepare_train_test_data(TPS_DIR, filename, reader):
-    # Prepare the training/test sets for matrix factorization
+    """
+    Prepare data for matrix factorization
+
+    Args:
+    -------
+    TPS_DIR: directory of the data folder
+    filename: file name of the dataset
+    reader: the Reader object used to parse a file containing ratings.
+
+    Outputs:
+    -------
+    : dataset
+    : dataset size
+    """
+
     pkl_file = open(os.path.join(TPS_DIR, filename), 'rb')
     data = pickle.load(pkl_file)
     data = np.array(data)
@@ -23,7 +37,19 @@ def prepare_train_test_data(TPS_DIR, filename, reader):
 
 
 def load_parameters(TPS_DIR, filename):
-    # Load the parameters for the model
+    """
+    Load the parameters for the model
+
+    Args:
+    -------
+    TPS_DIR: directory of the data folder
+    filename: file name
+
+    Outputs:
+    -------
+    : parameters for building the model
+    """
+
     f_para = open(os.path.join(TPS_DIR, filename), 'rb')
     para = pickle.load(f_para)
     user_num = para['user_num']
@@ -48,7 +74,18 @@ def load_parameters(TPS_DIR, filename):
 
 
 def get_close_ids(uid_attn_2d):
-    # Pick two User IDs close to each other in the tSNE 2D space.
+    """
+    Pick two User IDs close to each other in the tSNE 2D space.
+
+    Args:
+    -------
+    uid_attn_2d: t-SNE 2D representation of users in the attention layers
+
+    Outputs:
+    -------
+    : two closest User IDs
+    """
+
     dis_mat = distance_matrix(uid_attn_2d, uid_attn_2d)
     for i in range(len(dis_mat)):
         dis_mat[i][i] = np.inf

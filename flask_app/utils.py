@@ -4,7 +4,19 @@ import pickle
 
 
 def load_parameters(TPS_DIR, filename):
-    # Load the parameters for the model
+    """
+    Load the parameters for the model
+
+    Args:
+    -------
+    TPS_DIR: directory of the data folder
+    filename: file name
+
+    Outputs:
+    -------
+    : parameters for building the model
+    """
+
     f_para = open(os.path.join(TPS_DIR, filename), 'rb')
     para = pickle.load(f_para)
     user_num = para['user_num']
@@ -28,26 +40,79 @@ def load_parameters(TPS_DIR, filename):
         user_vocab_size, item_vocab_size
 
 
-def load_train_test_data(TPS_DIR, filename, u_text, i_text):
-    # Load and prepare training/validation/test sets
-    pkl_file = open(os.path.join(TPS_DIR, filename), 'rb')
-    data = pickle.load(pkl_file)
-    data = np.array(data)
-    pkl_file.close()
+def tf_serving(texts_u, texts_i, user_ids, item_ids):
+    """
+    Post the inputs to TensorFlow Serving model and obtain predictions
 
-    uid, iid, reuid, reiid, y_batch = zip(*data)
-    uid = np.array(uid)
-    iid = np.array(iid)
-    reuid = np.array(reuid)
-    reiid = np.array(reiid)
-    y_batch = np.array(y_batch)
+    Args:
+    -------
+    texts_u: users' reviews
+    texts_i: items' reviews
+    user_ids: user ids
+    item_ids: item ids
 
-    texts_u = []
-    texts_i = []
-    for i in range(len(uid)):
-        texts_u.append(u_text[uid[i][0]])
-        texts_i.append(i_text[iid[i][0]])
-    texts_u = np.array(texts_u)
-    texts_i = np.array(texts_i)
+    Outputs:
+    -------
+    : model outputs for rating/ranking prediction
+    : inference time
+    """
 
-    return uid, iid, reuid, reiid, y_batch, texts_u, texts_i
+    insts = {'texts_u:0': texts_u, 'texts_i:0': texts_i,
+             'uid:0': user_ids.tolist(), 'iid:0': item_ids.tolist()}
+    data = json.dumps({"signature_name": "serving_default", "inputs": insts})
+    headers = {"content-type": "application/json"}
+    time_a = datetime.datetime.now()
+    json_response = requests.post(
+        'http://localhost:8501/v1/models/recsys_model:predict', data=data, headers=headers)
+    time_b = datetime.datetime.now()
+    time_dif = time_b - time_a
+    res = json.loads(json_response.text)['outputs']
+
+    return res, time_dif
+
+
+def get_metadata(df_meta, item_ids_new, num_top=10, single_pred=False):
+    """
+    Prepare the metadata for top 10 suggested items
+
+    Args:
+    -------
+    df_meta: Pandas DataFrame of metadata
+    item_ids_new: sorted item ids based on their rating prediction
+    num_top: number of top items
+
+    Outputs:
+    -------
+    : item metadata of description, title, price, image url and categories
+    """
+
+    if single_pred:
+        sample = df_meta.loc[item_ids_new]
+        if sample['asin'] != item_id:
+            print('Wrong id metadata', item_id, sample['asin'])
+        else:
+            des_meta = sample['description']
+            title_meta = sample['title']
+            price_meta = sample['price']
+            imurl_meta = sample['imUrl']
+            categ_meta = sample['categories']
+
+    else:
+        des_meta = []
+        title_meta = []
+        price_meta = []
+        imurl_meta = []
+        categ_meta = []
+
+        for i in range(num_top):
+            sample = df_meta.loc[item_ids_new[i]]
+            if sample['asin'] != item_ids_new[i]:
+                print('Wrong id metadata', item_ids_new[i], sample['asin'])
+            else:
+                des_meta.append(sample['description'])
+                title_meta.append(sample['title'])
+                price_meta.append(sample['price'])
+                imurl_meta.append(sample['imUrl'])
+                categ_meta.append(sample['categories'])
+
+    return des_meta, title_meta, price_meta, imurl_meta, categ_meta

@@ -1,3 +1,4 @@
+// Rating/ranking prediction for 100 candidate items
 $(document).ready(function(){
     $("#rankbutton").on("click", function(){
         var user_id = $("#userid").val();
@@ -62,6 +63,7 @@ $(document).ready(function(){
 };
 
 
+// Get the top reviews and other reviews for user/item pair
 function getreviews(uid, iid)
 {
     $.ajax({
