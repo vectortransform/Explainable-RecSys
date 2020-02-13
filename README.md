@@ -1,6 +1,11 @@
 # Explainable RecSys
 Explainable RecSys is a personalized, review-level explainable recommendation system that can not only surface relevant items to users, but also highlight product reviews most relevant to their personal preferences simultaneously.
 
+<p align="center">
+  <a href="#" ><img src="https://github.com/CoserU/Explainable-RecSys/blob/master/figures/webapp.gif> </img></a>
+</p>
+
+
 ## Environment
 Python 3.6
 
