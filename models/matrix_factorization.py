@@ -11,7 +11,6 @@ from surprise import Reader
 from surprise import accuracy
 from surprise.model_selection import train_test_split
 from surprise.model_selection import cross_validate
-from utils import prepare_train_test_data
 
 
 parser = argparse.ArgumentParser(description='Hyperparameters')
@@ -30,6 +29,38 @@ random_seed = args.seed
 
 
 # Prepare training/validation sets
+def prepare_train_test_data(TPS_DIR, filename, reader):
+    """
+    Prepare data for matrix factorization (Surprise lib)
+
+    Args:
+    -------
+    TPS_DIR: directory of the data folder
+    filename: file name of the dataset
+    reader: the Reader object used to parse a file containing ratings.
+
+    Outputs:
+    -------
+    : dataset
+    : dataset size
+    """
+
+    pkl_file = open(os.path.join(TPS_DIR, filename), 'rb')
+    data = pickle.load(pkl_file)
+    data = np.array(data)
+    pkl_file.close()
+
+    uid, iid, reuid, reiid, yrating = zip(*data)
+    uid = np.array(uid)
+    iid = np.array(iid)
+    yrating = np.array(yrating)
+    df = pd.DataFrame({'userID': uid[:, 0], 'itemID': iid[:, 0], 'rating': yrating[:, 0]})
+    dataset = Dataset.load_from_df(df_train[['userID', 'itemID', 'rating']], reader)
+    dataset = dataset.build_full_trainset()
+
+    return dataset, len(uid)
+
+
 print('Loading files...')
 
 TPS_DIR = 'data/toyandgame'
@@ -44,7 +75,7 @@ print('Training set: {} samples and validation set: {} samples prepared'.format(
 
 # Model training
 algo = surprise.prediction_algorithms.matrix_factorization.NMF(n_factors=latent_size, lr_bu=lr, lr_bi=lr,
-                                                               random_state=random_seed, biased=False)
+                                                               random_state=random_seed)
 algo.fit(data_tr)
 pred_train = algo.test(data_tr.build_testset())
 pred_valid = algo.test(data_va)
