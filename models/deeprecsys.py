@@ -18,7 +18,10 @@ def CNN_text_processer(input_u, input_i, user_vocab_size, item_vocab_size, embed
                        num_filters, filter_size, review_num_u, review_len_u, review_num_i, review_len_i,
                        initW_u, initW_i):
     """
-    Process the review texts using CNN
+    Process the review texts using CNN.
+    Here I chose CNN instead of RNN because review texts are not very long, so we don't have to use
+    LSTM or GRU to extract the semantic information. The convolutional layers usually have fewer
+    parameters and can be trained a bit faster.
 
     Args:
     -------
@@ -66,6 +69,8 @@ def attention_weights(input_uid, input_iid, x_u, x_i,
     -------
     input_uid: user's id
     input_iid: item's id
+    x_u: semantics of user's reviews
+    x_i: semantics of item's reviews
     other_args: model parameters
 
     Outputs:
@@ -78,6 +83,7 @@ def attention_weights(input_uid, input_iid, x_u, x_i,
     vec_iid = Embedding(item_num + 2, embed_id_dim, embeddings_initializer=RandomUniform(minval=-
                                                                                          0.1, maxval=0.1, seed=random_seed), name='item_id_embed')(input_iid)
 
+    # Mapping user/item ID vectors and semantics of user/item's reviews to the attention space
     vec_uid = Dense(attention_size, activation=None, use_bias=False, kernel_initializer='glorot_uniform',
                     kernel_regularizer=l2(l2_reg_lambda), name='user_id_attention')(vec_uid)
     vec_iid = Dense(attention_size, activation=None, use_bias=False, kernel_initializer='glorot_uniform',
@@ -87,6 +93,7 @@ def attention_weights(input_uid, input_iid, x_u, x_i,
     vec_texti = Dense(attention_size, activation=None, use_bias=False, kernel_initializer='glorot_uniform',
                       kernel_regularizer=l2(l2_reg_lambda), name='item_text_attention')(x_i)
 
+    # Interaction between the user and each item review to learn personalized review-usefulness
     out_u = Multiply(name='usertext_itemid_interaction')([vec_textu, vec_iid])
     out_i = Multiply(name='itemtext_userid_interaction')([vec_texti, vec_uid])
 
@@ -104,6 +111,8 @@ def attention_weights(input_uid, input_iid, x_u, x_i,
                   kernel_initializer='glorot_uniform', bias_initializer='zeros')(out_u)
     out_i = Dense(1, activation=None, use_bias=True,
                   kernel_initializer='glorot_uniform', bias_initializer='zeros')(out_i)
+
+    # Output the weight (usefulness) for each review
     out_u = Softmax(axis=1, name='user_rev_weights')(out_u)
     out_i = Softmax(axis=1, name='item_rev_weights')(out_i)
 
@@ -130,6 +139,7 @@ def weighted_sum(out_u, x_u, out_i, x_i, dropout_keep_prob, random_seed):
     feas_u = tf.reduce_sum(Multiply()([out_u, x_u]), axis=1)
     feas_i = tf.reduce_sum(Multiply()([out_i, x_i]), axis=1)
 
+    # Dropout layers here to reduce overfitting
     feas_u = Dropout(1 - dropout_keep_prob, seed=random_seed)(feas_u)
     feas_i = Dropout(1 - dropout_keep_prob, seed=random_seed)(feas_i)
 
@@ -165,6 +175,7 @@ def combine_features(input_uid, input_iid, feas_u, feas_i, user_num, item_num, n
     t_i = Dense(n_latent, activation=None, use_bias=True, kernel_initializer='glorot_uniform',
                 bias_initializer='zeros', name='item_rev_latent')(feas_i)
 
+    # Merge the latent vectors for reviews and IDs
     f_u = Add(name='user_latent')([vec_uid, t_u])
     f_i = Add(name='item_latent')([vec_iid, t_i])
     return f_u, f_i
@@ -173,6 +184,7 @@ def combine_features(input_uid, input_iid, feas_u, feas_i, user_num, item_num, n
 def predict_rating(f_u, f_i, input_uid, input_iid, dropout_keep_prob, random_seed, user_num, item_num):
     """
     Predict the final rating for the user/item pair
+    The predicting function is similar to matrix factorization.
 
     Args:
     -------
@@ -187,6 +199,7 @@ def predict_rating(f_u, f_i, input_uid, input_iid, dropout_keep_prob, random_see
     : Predicted rating for the user/item pair
     """
 
+    # Merge the latent representation from user modeling and the latent representation from item modeling
     rating = Multiply()([f_u, f_i])
     rating = ReLU()(rating)
     rating = Dropout(1 - dropout_keep_prob, seed=random_seed)(rating)
@@ -222,8 +235,10 @@ def DeepRecSys(l2_reg_lambda, random_seed, dropout_keep_prob, embed_word_dim, em
       as review-usefulness.
     """
 
+    # input_u: user's review history; input_i: item's reviews
     input_u = Input(shape=(review_num_u, review_len_u), dtype='int32', name='texts_u')
     input_i = Input(shape=(review_num_i, review_len_i), dtype='int32', name='texts_i')
+    # input_uid: User ID; input_iid: Item ID
     input_uid = Input(shape=(1), dtype='int32', name='uid')
     input_iid = Input(shape=(1), dtype='int32', name='iid')
 
@@ -239,7 +254,7 @@ def DeepRecSys(l2_reg_lambda, random_seed, dropout_keep_prob, embed_word_dim, em
     rating = predict_rating(f_u, f_i, input_uid, input_iid,
                             dropout_keep_prob, random_seed, user_num, item_num)
 
-    if is_output_weights:
+    if is_output_weights:  # also output the weights (usefulness) of the reviews
         return Model(inputs=[input_u, input_i, input_uid, input_iid], outputs=[rating, out_u, out_i])
     else:
         return Model(inputs=[input_u, input_i, input_uid, input_iid], outputs=rating)
